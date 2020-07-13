@@ -24,3 +24,7 @@ optional arguments:
   -b BORDER, --border BORDER
                         border in px
 ```
+
+
+# ZPD
+Developed at [Zentrum für Philologie und Digitalität](https://www.uni-wuerzburg.de/en/zpd/startseite/) at the [Julius-Maximilians-Universität of Würzburg](https://www.uni-wuerzburg.de/en/home/)
