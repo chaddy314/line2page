@@ -16,7 +16,7 @@ optional arguments:
                         Path to merge objects
   -e IMG_EXT, --ext IMG_EXT
                         image extension
-  -p, --pred            Set Flag to also store .pred.txt
+  -p, --pred            Set Flag to also store .pred.txt at index=1
   -l LINES, --lines LINES
                         lines per page
   -ls SPACING, --line-spacing SPACING
