@@ -26,6 +26,7 @@ pageIterator = 0
 source = ""
 dest = ""
 pred = False
+debug = False
 
 img_ext = '.nrm.png'
 xmlSchemaLocation = 'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15/pagecontent.xsd'
@@ -104,6 +105,11 @@ def make_parser():
                         type=int,
                         default=10,
                         help='border in px')
+    parser.add_argument('--debug',
+                        action='store_true',
+                        dest='debug',
+                        default=False,
+                        help='prints debug xml')
     return parser
 
 
@@ -122,6 +128,8 @@ def parse(args):
     spacer = args.spacing
     global border
     border = args.border
+    global debug
+    debug = args.debug
 
 
 def getfiles():
@@ -168,17 +176,19 @@ def makepage(page):
     merged = merge_images(page)
     global dest
     if not os.path.exists(dest):
-        print(dest + "dir not found, creating directory")
+        #print(dest + "dir not found, creating directory")
         os.mkdir(dest)
 
     if not dest.endswith(os.path.sep):
         dest += os.path.sep
     merged.save(dest + name + img_ext)
     xml_tree = build_xml(page, name + img_ext, merged.height, merged.width)
+    if debug:
+        print(prettify(xml_tree))
     xml = ElementTree.tostring(xml_tree, 'utf8', 'xml')
     myfile = open(dest + name + ".xml", "wb")
     myfile.write(xml)
-    print(prettify(xml_tree))
+
     #xml.save("merged/" + name + ".xml")
 
 
@@ -193,7 +203,7 @@ def merge_images(list):
     spacer_height = spacer * (len(list)-1)
 
     for i in list:
-        print(i)
+        #print(i)
         image = Image.open(i[0])
         (width,height) = image.size
         imgwidth = max(imgwidth, width)
@@ -204,7 +214,7 @@ def merge_images(list):
     before = border
 
     for img in imglist:
-        print(before)
+        #print(before)
         result.paste(img, (border,before))
         (pw,ph) = img.size
         before += img.size[1] + spacer
@@ -253,13 +263,15 @@ def build_xml(line_list,img_name, img_height, img_width):
         line_coords.set('points', make_coord_string(last_bottom, width, height))
         last_bottom += (height+spacer)
         line_gt_text = SubElement(text_line, 'TextEquiv')
-        line_gt_text.set('index', str(1))
+        line_gt_text.set('index', str(0))
         unicode_gt = SubElement(line_gt_text, 'Unicode')
         unicode_gt.text = line[2]
-        line_pred_text = SubElement(text_line, 'TextEquiv')
-        line_pred_text.set('index', str(0))
-        unicode_pred = SubElement(line_pred_text, 'Unicode')
-        unicode_pred.text = line[4]
+        if pred:
+            line_pred_text = SubElement(text_line, 'TextEquiv')
+            line_pred_text.set('index', str(1))
+            unicode_pred = SubElement(line_pred_text, 'Unicode')
+            unicode_pred.text = line[4]
+
     return pcgts
 
 
