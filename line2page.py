@@ -72,23 +72,25 @@ def make_parser():
                         '--source-folder',
                         action='store',
                         dest='source_path',
-                        default='./',
+                        default=os.getcwd(),
                         help='Path to images and GT')
     parser.add_argument('-i',
                         '--images-folder',
                         action='store',
                         dest='image_path',
+                        default="",
                         help='Path to images')
     parser.add_argument('-gt',
                         '--gt-folder',
                         action='store',
                         dest='gt_path',
+                        default="",
                         help='Path to GT')
     parser.add_argument('-d',
                         '--dest-folder',
                         action='store',
                         dest='dest_path',
-                        default='merged/',
+                        default=os.getcwd() + '/merged/',
                         help='Path to merge objects')
 
     parser.add_argument('-e',
@@ -162,7 +164,7 @@ def parse(args):
     if not args.gt_path == "":
         gt_path = check_dest(args.gt_path)
     else:
-        gt_path = dest
+        gt_path = image_path
 
 
 def get_files():
