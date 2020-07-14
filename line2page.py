@@ -1,6 +1,7 @@
 import glob
 import getpass
 import os
+import sys
 import argparse
 from datetime import datetime
 from PIL import Image, ImageDraw
@@ -38,15 +39,20 @@ def main():
 
     os.chdir(source)
     cwd = os.getcwd()
-    print(cwd)
+    #print(cwd)
     getfiles()
     matchfiles()
     # print(matches)
     global pages
     pages = list(chunks(matches, lines))
+    i = 0
     for page in pages:
+        progress(i+1, len(pages), "Creating Page "+ str(i+1) + " of " + str(len(pages)))
         makepage(page)
+        i += 1
 
+
+    print("\nPages have been stored at ", dest)
     #makepage(pages[0])
     #makepage(pages[1])
 
@@ -234,7 +240,7 @@ def build_xml(line_list,img_name, img_height, img_width):
     creator = SubElement(metadata, 'Creator')
     creator.text = getpass.getuser()
     created = SubElement(metadata, 'Created')
-    generated_on = str(datetime.now())
+    generated_on = datetime.now().isoformat()
     created.text = generated_on
     last_change = SubElement(metadata,'LastChange')
     last_change.text = generated_on
@@ -291,6 +297,17 @@ def prettify(elem):
     rough_string = ElementTree.tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml("  ")
+
+
+def progress(count, total, status=''):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '█' * filled_len + '_' * (bar_len - filled_len)
+
+    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
