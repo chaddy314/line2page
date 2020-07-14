@@ -5,6 +5,7 @@ import sys
 import multiprocessing
 import argparse
 import time
+import ntpath
 from datetime import datetime
 from PIL import Image
 from xml.etree.ElementTree import Element, SubElement
@@ -13,13 +14,11 @@ from xml.etree import ElementTree
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
 
-gtList = []
 imgList = []
 nameList = []
 pairing = []
 matches = []
 lines = 20
-# pages = []
 border = 10
 spacer = 5
 iterative = True
@@ -27,6 +26,8 @@ pageIterator = 0
 
 source = ""
 dest = ""
+gt_path = ""
+image_path = ""
 pred = False
 debug = False
 
@@ -41,20 +42,16 @@ def main():
     parser = make_parser()
     parse(parser.parse_args())
 
-    os.chdir(source)
-    # cwd = os.getcwd()
-    # print(cwd)
+    # os.chdir(source)
     get_files()
     match_files()
-    # print(matches)
-    # global pages
     pages = list(chunks(matches, lines))
     pages = name_pages(pages)
     i = 0
     processes = []
     for page in pages:
         progress(i + 1, len(pages) * 2, "Processing page" + str(i + 1) + " of " + str(len(pages)))
-        process = multiprocessing.Process(target=makepage, args=(page,))
+        process = multiprocessing.Process(target=make_page, args=(page,))
         processes.append(process)
         process.start()
         i += 1
@@ -63,12 +60,10 @@ def main():
         progress(i + 1, len(pages) * 2, "Finishing page " + str((i + 1) - len(pages)) + " of " + str(len(pages)))
         process.join()
         i += 1
-        
+
     toc = time.perf_counter()
     print(f"\nFinished merging in {toc - tic:0.4f} seconds")
     print("\nPages have been stored at ", dest)
-    # makepage(pages[0])
-    # makepage(pages[1])
 
 
 def make_parser():
@@ -78,14 +73,22 @@ def make_parser():
                         action='store',
                         dest='source_path',
                         default='./',
-                        required=True,
                         help='Path to images and GT')
+    parser.add_argument('-i',
+                        '--images-folder',
+                        action='store',
+                        dest='image_path',
+                        help='Path to images')
+    parser.add_argument('-gt',
+                        '--gt-folder',
+                        action='store',
+                        dest='gt_path',
+                        help='Path to GT')
     parser.add_argument('-d',
                         '--dest-folder',
                         action='store',
                         dest='dest_path',
                         default='merged/',
-                        required=True,
                         help='Path to merge objects')
 
     parser.add_argument('-e',
@@ -150,24 +153,32 @@ def parse(args):
     border = args.border
     global debug
     debug = args.debug
+    global image_path
+    if not args.image_path == "":
+        image_path = check_dest(args.image_path)
+    else:
+        image_path = dest
+    global gt_path
+    if not args.gt_path == "":
+        gt_path = check_dest(args.gt_path)
+    else:
+        gt_path = dest
 
 
 def get_files():
     global imgList
-    global gtList
-    imgList = [f for f in sorted(glob.glob('*' + img_ext))]
-    gtList = [f for f in glob.glob("*.gt.txt")]
+    imgList = [f for f in sorted(glob.glob(image_path + '*' + img_ext))]
 
 
 def match_files():
     for img in imgList:
-        name = img.split('.')[0]
+        name = strip_path(img.split('.')[0])
         nameList.append(name)
         pairing.append(img)
-        gt_filename = [f for f in glob.glob(name + ".gt.txt")][0]
+        gt_filename = [f for f in glob.glob(gt_path + name + ".gt.txt")][0]
         pairing.append(gt_filename)
         pairing.append(get_text(gt_filename))
-        pred_filename = [f for f in glob.glob(name + ".pred.txt")][0]
+        pred_filename = [f for f in glob.glob(gt_path + name + ".pred.txt")][0]
         pairing.append(pred_filename)
         pairing.append(get_text(pred_filename))
         matches.append(pairing.copy())
@@ -175,8 +186,8 @@ def match_files():
 
 
 def get_text(filename):
-    with open(filename, 'r') as myfile:
-        data = myfile.read().rstrip()
+    with open(filename, 'r') as my_file:
+        data = my_file.read().rstrip()
         return data
 
 
@@ -192,19 +203,17 @@ def check_dest(destination):
         os.mkdir(destination)
     if not destination.endswith(os.path.sep):
         destination += os.path.sep
-
     return destination
 
 
-def makepage(page_with_name):
+def make_page(page_with_name):
     merged = merge_images(page_with_name[0])
-    # print("merged page: ", page_with_name[1])
-    merged.save(dest + page_with_name[1] + img_ext)
+    merged.save(dest + strip_path(page_with_name[1]) + img_ext)
     xml_tree = build_xml(page_with_name[0], page_with_name[1] + img_ext, merged.height, merged.width)
     if debug:
         print(prettify(xml_tree))
     xml = ElementTree.tostring(xml_tree, 'utf8', 'xml')
-    myfile = open(dest + page_with_name[1] + ".xml", "wb")
+    myfile = open(dest + strip_path(page_with_name[1]) + ".xml", "wb")
     myfile.write(xml)
 
 
@@ -220,10 +229,13 @@ def name_pages(pages):
             name = page[0][0].split(".")[0] + "-" + page[-1][0].split(".")[0]
         page_with_name.append(page)
         page_with_name.append(name)
-        # print(page_with_name[1])
         pages_with_name.append(page_with_name.copy())
         page_with_name.clear()
     return pages_with_name
+
+
+def strip_path(path):
+    return ntpath.basename(path)
 
 
 def merge_images(page):
@@ -237,7 +249,6 @@ def merge_images(page):
     spacer_height = spacer * (len(page) - 1)
 
     for line in page:
-        # print(i)
         image = Image.open(line[0])
         (width, height) = image.size
         img_width = max(img_width, width)
@@ -248,7 +259,6 @@ def merge_images(page):
     before = border
 
     for img in img_list:
-        # print(before)
         result.paste(img, (border, before))
         before += img.size[1] + spacer
     return result
@@ -290,7 +300,7 @@ def build_xml(line_list, img_name, img_height, img_width):
     last_bottom = border
     for line in line_list:
         text_line = SubElement(text_region, 'TextLine')
-        text_line.set('id', 'r0_l' + str(line[0].split('.')[0].zfill(3)))
+        text_line.set('id', 'r0_l' + str(strip_path(line[0]).split('.')[0].zfill(3)))
         i += 1
         line_coords = SubElement(text_line, 'Coords')
         image = Image.open(line[0])
