@@ -3,6 +3,7 @@ import getpass
 import os
 import sys
 import argparse
+import time
 from datetime import datetime
 from PIL import Image, ImageDraw
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
@@ -33,7 +34,7 @@ img_ext = '.nrm.png'
 xmlSchemaLocation = 'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15/pagecontent.xsd'
 
 def main():
-
+    tic = time.perf_counter()
     parser = make_parser()
     parse(parser.parse_args())
 
@@ -51,7 +52,8 @@ def main():
         makepage(page)
         i += 1
 
-
+    toc = time.perf_counter()
+    print(f"\nFinished merging in {toc - tic:0.4f} seconds")
     print("\nPages have been stored at ", dest)
     #makepage(pages[0])
     #makepage(pages[1])
