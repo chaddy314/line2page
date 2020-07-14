@@ -2,16 +2,16 @@ import glob
 import getpass
 import os
 import sys
+import multiprocessing
 import argparse
 import time
 from datetime import datetime
-from PIL import Image, ImageDraw
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring
+from PIL import Image
+from xml.etree.ElementTree import Element, SubElement
 from xml.etree import ElementTree
 
 # noinspection PyUnresolvedReferences
 from xml.dom import minidom
-
 
 gtList = []
 imgList = []
@@ -19,7 +19,7 @@ nameList = []
 pairing = []
 matches = []
 lines = 20
-pages = []
+# pages = []
 border = 10
 spacer = 5
 iterative = True
@@ -31,7 +31,10 @@ pred = False
 debug = False
 
 img_ext = '.nrm.png'
-xmlSchemaLocation = 'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15/pagecontent.xsd'
+xmlSchemaLocation = \
+    'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15 ' \
+    'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15/pagecontent.xsd '
+
 
 def main():
     tic = time.perf_counter()
@@ -39,24 +42,33 @@ def main():
     parse(parser.parse_args())
 
     os.chdir(source)
-    cwd = os.getcwd()
-    #print(cwd)
-    getfiles()
-    matchfiles()
+    # cwd = os.getcwd()
+    # print(cwd)
+    get_files()
+    match_files()
     # print(matches)
-    global pages
+    # global pages
     pages = list(chunks(matches, lines))
+    pages = name_pages(pages)
     i = 0
+    processes = []
     for page in pages:
-        progress(i+1, len(pages), "Creating Page "+ str(i+1) + " of " + str(len(pages)))
-        makepage(page)
+        progress(i + 1, len(pages) * 2, "Processing page" + str(i + 1) + " of " + str(len(pages)))
+        process = multiprocessing.Process(target=makepage, args=(page,))
+        processes.append(process)
+        process.start()
         i += 1
 
+    for process in processes:
+        progress(i + 1, len(pages) * 2, "Finishing page " + str((i + 1) - len(pages)) + " of " + str(len(pages)))
+        process.join()
+        i += 1
+        
     toc = time.perf_counter()
     print(f"\nFinished merging in {toc - tic:0.4f} seconds")
     print("\nPages have been stored at ", dest)
-    #makepage(pages[0])
-    #makepage(pages[1])
+    # makepage(pages[0])
+    # makepage(pages[1])
 
 
 def make_parser():
@@ -125,7 +137,7 @@ def parse(args):
     global source
     source = args.source_path
     global dest
-    dest = args.dest_path
+    dest = check_dest(args.dest_path)
     global img_ext
     img_ext = args.img_ext
     global pred
@@ -140,14 +152,14 @@ def parse(args):
     debug = args.debug
 
 
-def getfiles():
+def get_files():
     global imgList
     global gtList
     imgList = [f for f in sorted(glob.glob('*' + img_ext))]
     gtList = [f for f in glob.glob("*.gt.txt")]
 
 
-def matchfiles():
+def match_files():
     for img in imgList:
         name = img.split('.')[0]
         nameList.append(name)
@@ -174,62 +186,75 @@ def chunks(lst, n):
         yield lst[i:i + n]
 
 
-def makepage(page):
-    if iterative:
-        global pageIterator
-        pageIterator += 1
-        name = str(pageIterator).zfill(4)
-    else:
-        name = page[0][0].split(".")[0] + "-" + page[-1][0].split(".")[0]
-    merged = merge_images(page)
-    global dest
-    if not os.path.exists(dest):
-        #print(dest + "dir not found, creating directory")
-        os.mkdir(dest)
+def check_dest(destination):
+    if not os.path.exists(destination):
+        print(destination + "dir not found, creating directory")
+        os.mkdir(destination)
+    if not destination.endswith(os.path.sep):
+        destination += os.path.sep
 
-    if not dest.endswith(os.path.sep):
-        dest += os.path.sep
-    merged.save(dest + name + img_ext)
-    xml_tree = build_xml(page, name + img_ext, merged.height, merged.width)
+    return destination
+
+
+def makepage(page_with_name):
+    merged = merge_images(page_with_name[0])
+    # print("merged page: ", page_with_name[1])
+    merged.save(dest + page_with_name[1] + img_ext)
+    xml_tree = build_xml(page_with_name[0], page_with_name[1] + img_ext, merged.height, merged.width)
     if debug:
         print(prettify(xml_tree))
     xml = ElementTree.tostring(xml_tree, 'utf8', 'xml')
-    myfile = open(dest + name + ".xml", "wb")
+    myfile = open(dest + page_with_name[1] + ".xml", "wb")
     myfile.write(xml)
 
-    #xml.save("merged/" + name + ".xml")
+
+def name_pages(pages):
+    page_with_name = []
+    pages_with_name = []
+    page_iterator = 0
+    for page in pages:
+        if iterative:
+            page_iterator += 1
+            name = str(page_iterator).zfill(4)
+        else:
+            name = page[0][0].split(".")[0] + "-" + page[-1][0].split(".")[0]
+        page_with_name.append(page)
+        page_with_name.append(name)
+        # print(page_with_name[1])
+        pages_with_name.append(page_with_name.copy())
+        page_with_name.clear()
+    return pages_with_name
 
 
-def merge_images(list):
+def merge_images(page):
     """Merge list of images into one, displayed on top of each other
     :return: the merged Image object
     """
 
-    imglist = []
-    imgwidth = 0
-    imgheight = 0
-    spacer_height = spacer * (len(list)-1)
+    img_list = []
+    img_width = 0
+    img_height = 0
+    spacer_height = spacer * (len(page) - 1)
 
-    for i in list:
-        #print(i)
-        image = Image.open(i[0])
-        (width,height) = image.size
-        imgwidth = max(imgwidth, width)
-        imgheight += height
-        imglist.append(image)
+    for line in page:
+        # print(i)
+        image = Image.open(line[0])
+        (width, height) = image.size
+        img_width = max(img_width, width)
+        img_height += height
+        img_list.append(image)
 
-    result = Image.new('RGB', (imgwidth + border*2, imgheight + border*2 + spacer_height),(255,255,255))
+    result = Image.new('RGB', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
     before = border
 
-    for img in imglist:
-        #print(before)
-        result.paste(img, (border,before))
-        (pw,ph) = img.size
+    for img in img_list:
+        # print(before)
+        result.paste(img, (border, before))
         before += img.size[1] + spacer
     return result
 
 
-def build_xml(line_list,img_name, img_height, img_width):
+def build_xml(line_list, img_name, img_height, img_width):
     """Builds PageXML from list of images, with txt files corresponding to each one of them
     :return: the built PageXml[.xml] file
     """
@@ -244,20 +269,22 @@ def build_xml(line_list,img_name, img_height, img_width):
     created = SubElement(metadata, 'Created')
     generated_on = datetime.now().isoformat()
     created.text = generated_on
-    last_change = SubElement(metadata,'LastChange')
+    last_change = SubElement(metadata, 'LastChange')
     last_change.text = generated_on
 
     page = SubElement(pcgts, 'Page')
-    page.set('imageFilename',img_name)
+    page.set('imageFilename', img_name)
     page.set('imageHeight', str(img_height))
     page.set('imageWidth', str(img_width))
 
-    text_region = SubElement(page,'TextRegion')
+    text_region = SubElement(page, 'TextRegion')
     text_region.set('id', 'r0')
     text_region.set('type', 'paragraph')
     region_coords = SubElement(text_region, 'Coords')
     s = str(border)
-    coord_string = s + ',' + s + ' ' + s + "," + str(img_height - border) + ' ' + str(img_width - border) + ',' + str(img_height - border) + ' ' + str(img_width - border) + ',' + s
+    coord_string = s + ',' + s + ' ' + s + "," + str(img_height - border) \
+        + ' ' + str(img_width - border) + ',' + str(img_height - border) \
+        + ' ' + str(img_width - border) + ',' + s
     region_coords.set('points', coord_string)
     i = 1
     last_bottom = border
@@ -265,27 +292,26 @@ def build_xml(line_list,img_name, img_height, img_width):
         text_line = SubElement(text_region, 'TextLine')
         text_line.set('id', 'r0_l' + str(line[0].split('.')[0].zfill(3)))
         i += 1
-        line_coords = SubElement(text_line,'Coords')
+        line_coords = SubElement(text_line, 'Coords')
         image = Image.open(line[0])
         (width, height) = image.size
         line_coords.set('points', make_coord_string(last_bottom, width, height))
-        last_bottom += (height+spacer)
+        last_bottom += (height + spacer)
         line_gt_text = SubElement(text_line, 'TextEquiv')
         line_gt_text.set('index', str(0))
         unicode_gt = SubElement(line_gt_text, 'Unicode')
         unicode_gt.text = line[2]
         if pred:
-            line_pred_text = SubElement(text_line, 'TextEquiv')
-            line_pred_text.set('index', str(1))
-            unicode_pred = SubElement(line_pred_text, 'Unicode')
-            unicode_pred.text = line[4]
+            line_prediction_text = SubElement(text_line, 'TextEquiv')
+            line_prediction_text.set('index', str(1))
+            unicode_prediction = SubElement(line_prediction_text, 'Unicode')
+            unicode_prediction.text = line[4]
 
     return pcgts
 
 
 def make_coord_string(previous_lower_left, line_width, line_height):
     b = str(border)
-    s = str(spacer)
     p = str(previous_lower_left)
     w = str(line_width + border)
     h = str(line_height + previous_lower_left)
