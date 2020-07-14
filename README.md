@@ -25,7 +25,7 @@ optional arguments:
                         border in px
 ```
 
-####File Names
+#### File Names
 Please note that each image file has to have the same name as its Ground Truth file.
 ```
 foo.nrm.png --> foo.gt.txt (& foo.pred.txt)
