@@ -25,6 +25,12 @@ optional arguments:
                         border in px
 ```
 
+####File Names
+Please note that each image file has to have the same name as its Ground Truth file.
+```
+foo.nrm.png --> foo.gt.txt (& foo.pred.txt)
+bar.bin.png --> bar.gt.txt (& bar.pred.txt)
+```
 
 # ZPD
 Developed at [Zentrum für Philologie und Digitalität](https://www.uni-wuerzburg.de/en/zpd/startseite/) at the [Julius-Maximilians-Universität of Würzburg](https://www.uni-wuerzburg.de/en/home/)
