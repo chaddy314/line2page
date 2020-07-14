@@ -58,10 +58,12 @@ def main():
         processes.append(process)
         process.start()
         i += 1
+
     for process in processes:
         progress(i + 1, len(pages) * 2, "Finishing page " + str((i + 1) - len(pages)) + " of " + str(len(pages)))
         process.join()
         i += 1
+        
     toc = time.perf_counter()
     print(f"\nFinished merging in {toc - tic:0.4f} seconds")
     print("\nPages have been stored at ", dest)
