@@ -168,7 +168,7 @@ def parse(args):
     if not args.image_path == "":
         image_path = check_dest(args.image_path)
     else:
-        image_path = dest
+        image_path = source
     global gt_path
     if not args.gt_path == "":
         gt_path = check_dest(args.gt_path)
