@@ -1,5 +1,5 @@
 import glob
-import getpass
+#  import getpass
 import os
 import sys
 import multiprocessing
@@ -23,6 +23,7 @@ border = 10
 spacer = 5
 iterative = True
 pageIterator = 0
+creator = "user"
 
 source = ""
 dest = ""
@@ -68,6 +69,12 @@ def main():
 
 def make_parser():
     parser = argparse.ArgumentParser(description='python script to merge GT lines to page images and xml')
+    parser.add_argument('-c',
+                        '--creator',
+                        action='store',
+                        dest='creator',
+                        default='user',
+                        help='creator tag for page xml')
     parser.add_argument('-s',
                         '--source-folder',
                         action='store',
@@ -97,7 +104,7 @@ def make_parser():
                         '--ext',
                         action='store',
                         dest='img_ext',
-                        default='.nrm.png',
+                        default='.bin.png',
                         help='image extension')
 
     parser.add_argument('-p',
@@ -139,6 +146,8 @@ def make_parser():
 
 
 def parse(args):
+    global creator
+    creator = args.creator
     global source
     source = args.source_path
     global dest
@@ -277,7 +286,7 @@ def build_xml(line_list, img_name, img_height, img_width):
 
     metadata = SubElement(pcgts, 'Metadata')
     creator = SubElement(metadata, 'Creator')
-    creator.text = getpass.getuser()
+    creator.text = creator
     created = SubElement(metadata, 'Created')
     generated_on = datetime.now().isoformat()
     created.text = generated_on
