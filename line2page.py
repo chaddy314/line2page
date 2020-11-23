@@ -23,7 +23,7 @@ border = 10
 spacer = 5
 iterative = True
 pageIterator = 0
-creator = "user"
+page_creator = "user"
 
 source = ""
 dest = ""
@@ -146,8 +146,8 @@ def make_parser():
 
 
 def parse(args):
-    global creator
-    creator = args.creator
+    global page_creator
+    page_creator = args.creator
     global source
     source = args.source_path
     global dest
@@ -265,8 +265,11 @@ def merge_images(page):
         img_width = max(img_width, width)
         img_height += height
         img_list.append(image)
-
-    result = Image.new('RGB', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
+    img_ext: str
+    if 'nrm' not in img_ext:
+        result = Image.new('RGB', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
+    else:
+        result = Image.new('AL', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
     before = border
 
     for img in img_list:
@@ -286,7 +289,7 @@ def build_xml(line_list, img_name, img_height, img_width):
 
     metadata = SubElement(pcgts, 'Metadata')
     creator = SubElement(metadata, 'Creator')
-    creator.text = creator
+    creator.text = page_creator
     created = SubElement(metadata, 'Created')
     generated_on = datetime.now().isoformat()
     created.text = generated_on
