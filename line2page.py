@@ -173,7 +173,7 @@ def parse(args):
     if not args.gt_path == "":
         gt_path = check_dest(args.gt_path)
     else:
-        gt_path = image_path
+        gt_path = source
 
 
 def get_files():
@@ -189,9 +189,10 @@ def match_files():
         gt_filename = [f for f in glob.glob(gt_path + name + ".gt.txt")][0]
         pairing.append(gt_filename)
         pairing.append(get_text(gt_filename))
-        pred_filename = [f for f in glob.glob(gt_path + name + ".pred.txt")][0]
-        pairing.append(pred_filename)
-        pairing.append(get_text(pred_filename))
+        if pred:
+            pred_filename = [f for f in glob.glob(gt_path + name + ".pred.txt")][0]
+            pairing.append(pred_filename)
+            pairing.append(get_text(pred_filename))
         matches.append(pairing.copy())
         pairing.clear()
 
@@ -265,11 +266,11 @@ def merge_images(page):
         img_width = max(img_width, width)
         img_height += height
         img_list.append(image)
-    img_ext: str
+    #  img_ext: str
     if 'nrm' not in img_ext:
         result = Image.new('RGB', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
     else:
-        result = Image.new('AL', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
+        result = Image.new('LA', (img_width + border * 2, img_height + border * 2 + spacer_height))
     before = border
 
     for img in img_list:
