@@ -270,7 +270,7 @@ def merge_images(page):
     if 'nrm' not in img_ext:
         result = Image.new('RGB', (img_width + border * 2, img_height + border * 2 + spacer_height), (255, 255, 255))
     else:
-        result = Image.new('LA', (img_width + border * 2, img_height + border * 2 + spacer_height))
+        result = Image.new('LA', (img_width + border * 2, img_height + border * 2 + spacer_height), "WHITE")
     before = border
 
     for img in img_list:
