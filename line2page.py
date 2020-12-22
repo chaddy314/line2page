@@ -243,6 +243,7 @@ def check_dest(destination):
 def make_page(page_with_name, semaphore):
     merged = merge_images(page_with_name[0])
     merged.save(dest + strip_path(page_with_name[1]) + img_ext)
+    merged.close()
     xml_tree = build_xml(page_with_name[0], page_with_name[1] + img_ext, merged.height, merged.width)
     if debug:
         print(prettify(xml_tree))
