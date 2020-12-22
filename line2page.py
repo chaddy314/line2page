@@ -249,6 +249,7 @@ def make_page(page_with_name, semaphore):
     xml = ElementTree.tostring(xml_tree, 'utf8', 'xml')
     myfile = open(dest + strip_path(page_with_name[1]) + ".xml", "wb")
     myfile.write(xml)
+    myfile.close()
     semaphore.release()
 
 
