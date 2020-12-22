@@ -301,6 +301,7 @@ def merge_images(page):
     for img in img_list:
         result.paste(img, (border, before))
         before += img.size[1] + spacer
+        img.close()
     return result
 
 
