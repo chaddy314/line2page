@@ -3,6 +3,7 @@ import glob
 import os
 import sys
 import multiprocessing
+from multiprocessing import Semaphore
 import argparse
 import time
 import ntpath
@@ -24,6 +25,7 @@ spacer = 5
 iterative = True
 pageIterator = 0
 page_creator = "user"
+thread_count = 16
 
 source = ""
 dest = ""
@@ -50,9 +52,13 @@ def main():
     pages = name_pages(pages)
     i = 0
     processes = []
+    concurrency = thread_count
+    print("Currently using " + str(concurrency) + " Thread(s)")
+    sema = Semaphore(concurrency)
     for page in pages:
+        sema.acquire()
         progress(i + 1, len(pages) * 2, "Processing page" + str(i + 1) + " of " + str(len(pages)))
-        process = multiprocessing.Process(target=make_page, args=(page,))
+        process = multiprocessing.Process(target=make_page, args=(page, sema,))
         processes.append(process)
         process.start()
         i += 1
@@ -142,6 +148,12 @@ def make_parser():
                         dest='debug',
                         default=False,
                         help='prints debug xml')
+    parser.add_argument('--threads',
+                        action='store',
+                        dest='thread_count',
+                        type=int,
+                        default=16,
+                        help='Thread count to be used')
     return parser
 
 
@@ -174,6 +186,8 @@ def parse(args):
         gt_path = check_dest(args.gt_path)
     else:
         gt_path = source
+    global thread_count
+    thread_count =args.thread_count
 
 
 def get_files():
@@ -226,7 +240,7 @@ def check_dest(destination):
     return destination
 
 
-def make_page(page_with_name):
+def make_page(page_with_name, semaphore):
     merged = merge_images(page_with_name[0])
     merged.save(dest + strip_path(page_with_name[1]) + img_ext)
     xml_tree = build_xml(page_with_name[0], page_with_name[1] + img_ext, merged.height, merged.width)
@@ -235,6 +249,7 @@ def make_page(page_with_name):
     xml = ElementTree.tostring(xml_tree, 'utf8', 'xml')
     myfile = open(dest + strip_path(page_with_name[1]) + ".xml", "wb")
     myfile.write(xml)
+    semaphore.release()
 
 
 def name_pages(pages):
