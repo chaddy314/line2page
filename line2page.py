@@ -35,7 +35,7 @@ debug = False
 img_ext = '.nrm.png'
 xmlSchemaLocation = \
     'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15 ' \
-    'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15/pagecontent.xsd '
+    'http://schema.primaresearch.org/PAGE/gts/pagecontent/2017-07-15/pagecontent.xsd'
 
 
 def main():
@@ -184,17 +184,25 @@ def get_files():
 def match_files():
     for img in imgList:
         name = strip_path(img.split('.')[0])
-        nameList.append(name)
-        pairing.append(img)
-        gt_filename = [f for f in glob.glob(gt_path + name + ".gt.txt")][0]
-        pairing.append(gt_filename)
-        pairing.append(get_text(gt_filename))
-        if pred:
-            pred_filename = [f for f in glob.glob(gt_path + name + ".pred.txt")][0]
-            pairing.append(pred_filename)
-            pairing.append(get_text(pred_filename))
-        matches.append(pairing.copy())
-        pairing.clear()
+        gt_files_list = [f for f in glob.glob(gt_path + name + ".gt.txt")]
+        if len(gt_files_list) > 0:
+            nameList.append(name)
+            pairing.append(img)
+            gt_filename = gt_files_list[0]
+            pairing.append(gt_filename)
+            pairing.append(get_text(gt_filename))
+            if pred:
+                pred_file_list = [f for f in glob.glob(gt_path + name + ".pred.txt")]
+                if len(pred_file_list) > 0:
+                    pred_filename = pred_file_list[0]
+                    pairing.append(pred_filename)
+                    pairing.append(get_text(pred_filename))
+                else:
+                    print("WARNING: The File " + gt_path + name + ".pred.txt could not be found! Omitting line from page")
+            matches.append(pairing.copy())
+            pairing.clear()
+        else:
+            print("WARNING: The File " + gt_path + name + ".gt.txt could not be found! Omitting line from page")
 
 
 def get_text(filename):
