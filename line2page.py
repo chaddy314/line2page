@@ -248,6 +248,7 @@ def make_page(page_with_name, semaphore):
     if debug:
         print(prettify(xml_tree))
     xml = ElementTree.tostring(xml_tree, 'utf8', 'xml')
+    xml_tree.clear()
     myfile = open(dest + strip_path(page_with_name[1]) + ".xml", "wb")
     myfile.write(xml)
     myfile.close()
@@ -346,6 +347,7 @@ def build_xml(line_list, img_name, img_height, img_width):
         line_coords = SubElement(text_line, 'Coords')
         image = Image.open(line[0])
         (width, height) = image.size
+        image.close()
         line_coords.set('points', make_coord_string(last_bottom, width, height))
         last_bottom += (height + spacer)
         line_gt_text = SubElement(text_line, 'TextEquiv')
