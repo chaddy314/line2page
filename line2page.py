@@ -287,7 +287,9 @@ def merge_images(page):
     spacer_height = spacer * (len(page) - 1)
 
     for line in page:
-        image = Image.open(line[0])
+        image_data = Image.open(line[0])
+        image = image_data.copy()
+        image_data.close()
         (width, height) = image.size
         img_width = max(img_width, width)
         img_height += height
